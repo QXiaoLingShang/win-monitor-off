@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 # 强制 Windows 使用原生的显示器空闲关闭路径。
 # 不发送 SC_MONITORPOWER：在 Modern Standby 笔记本上它可能触发 S0 睡眠。

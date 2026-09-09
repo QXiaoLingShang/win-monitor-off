@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <wchar.h>
 
+static void print_last_error(const wchar_t *action)
+{
+    DWORD error = GetLastError();
+    fwprintf(stderr, L"无法%s（错误码 %lu）。\n", action, (unsigned long)error);
+}
+
 int main(void)
 {
     /*
@@ -22,13 +28,48 @@ int main(void)
     }
     slash[1] = L'\0';
 
+    wchar_t script_path[32768];
+    int script_written = swprintf_s(
+        script_path,
+        ARRAYSIZE(script_path),
+        L"%smonitor_off.ps1",
+        module_path);
+    if (script_written < 0 || GetFileAttributesW(script_path) == INVALID_FILE_ATTRIBUTES) {
+        fwprintf(stderr, L"找不到同目录下的 monitor_off.ps1，无法启动。\n");
+        return 1;
+    }
+
+    wchar_t powershell_path[32768];
+    DWORD powershell_length = SearchPathW(
+        NULL,
+        L"pwsh.exe",
+        NULL,
+        ARRAYSIZE(powershell_path),
+        powershell_path,
+        NULL);
+    if (powershell_length == 0 || powershell_length >= ARRAYSIZE(powershell_path)) {
+        powershell_length = SearchPathW(
+            NULL,
+            L"powershell.exe",
+            NULL,
+            ARRAYSIZE(powershell_path),
+            powershell_path,
+            NULL);
+    }
+    if (powershell_length == 0 || powershell_length >= ARRAYSIZE(powershell_path)) {
+        fwprintf(stderr, L"找不到 PowerShell（pwsh.exe 或 powershell.exe）。\n");
+        return 1;
+    }
+
     wchar_t command_line[32768];
     int written = swprintf_s(
         command_line,
         ARRAYSIZE(command_line),
-        L"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"%smonitor_off.ps1\"",
-        module_path);
+        L"\"%s\" -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"%s\"",
+        powershell_path,
+        script_path);
     if (written < 0) {
+        fwprintf(stderr, L"无法生成 PowerShell 启动参数。\n");
         return 1;
     }
 
@@ -36,7 +77,7 @@ int main(void)
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process = { 0 };
     if (!CreateProcessW(
-            NULL,
+            powershell_path,
             command_line,
             NULL,
             NULL,
@@ -46,6 +87,7 @@ int main(void)
             module_path,
             &startup,
             &process)) {
+        print_last_error(L"启动 PowerShell");
         return 1;
     }
 
