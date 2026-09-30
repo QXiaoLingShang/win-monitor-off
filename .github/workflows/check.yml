@@ -1,0 +1,27 @@
+name: Check
+
+on:
+  push:
+    branches: [main, native-idle-off]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check with Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/check.ps1
+      - name: Check with PowerShell 7
+        shell: pwsh
+        run: ./tests/check.ps1
+      - name: Build launcher
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build -Force | Out-Null
+          clang -std=c11 -Wall -Wextra -Werror monitor_off.c -o build/monitor_off.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
