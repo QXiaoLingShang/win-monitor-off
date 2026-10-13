@@ -20,6 +20,10 @@ if ($null -eq $compiler) {
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'monitor_off.bat') -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $root 'monitor_off.ps1') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $root 'README.zh-CN.md') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $output -Recurse -Force
 $runtimeSource = Join-Path $output 'src'
 New-Item -ItemType Directory -Path $runtimeSource -Force | Out-Null
 foreach ($name in @('MonitorOff.ps1', 'NativeMethods.cs', 'launcher.c')) {

@@ -10,7 +10,7 @@ Manually switching off the monitor, unplugging it, or repeatedly closing the lid
 
 ## Usage
 
-1. Download the [source ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) and extract it. Keep the extracted folder structure intact.
+1. Download the [latest complete Windows package](https://github.com/QXiaoLingShang/win-monitor-off/releases/latest) and extract it. Keep the extracted folder structure intact.
 2. Run `monitor_off.bat`. Leave the keyboard and mouse idle for about six seconds while Windows turns off the displays.
 3. Press a key or move the mouse to wake the displays and end the session.
 

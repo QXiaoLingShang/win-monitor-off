@@ -10,7 +10,7 @@
 
 ## 使用
 
-1. 下载 [源码 ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) 并解压，保持解压后的文件结构不变。
+1. 前往 [Releases 发布页](https://github.com/QXiaoLingShang/win-monitor-off/releases/latest)下载最新的 Windows 完整文件包并解压，保持文件结构不变。
 2. 运行 `monitor_off.bat`，然后约六秒内不要操作键盘或鼠标，等待 Windows 关闭显示器。
 3. 按任意键或移动鼠标，重新点亮显示器并结束本次会话。
 
