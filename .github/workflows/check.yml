@@ -2,7 +2,7 @@ name: Check
 
 on:
   push:
-    branches: [main, native-idle-off]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -23,7 +23,4 @@ jobs:
         run: ./tests/check.ps1
       - name: Build launcher
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path build -Force | Out-Null
-          clang -std=c11 -Wall -Wextra -Werror monitor_off.c -o build/monitor_off.exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: ./scripts/package.ps1

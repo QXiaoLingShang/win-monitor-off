@@ -1,55 +1,77 @@
-<div align="center">
+<h1 align="center">win-monitor-off</h1>
 
-# win-monitor-off
+<p align="center">
+  English · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-Turn off the display quickly while keeping Windows running.
+Have you ever been running a long task on a laptop connected to an external monitor and wanted to turn off the screens so the light would not disturb others, only to realize that closing the lid may put the computer to sleep while turning off only the external monitor leaves the laptop's built-in display on?
 
-[简体中文](README.zh-CN.md)
+Manually switching off the monitor, unplugging it, or repeatedly closing the lid gets tedious. Worse, the system may go to sleep as the screens turn off, interrupting background tasks. `win-monitor-off` was built for this: it temporarily sets the active power plan's display idle timeout to one second and asks Windows to keep the system running during the session. About six seconds later, the displays turn off and the original timeout is restored while background tasks continue. Keyboard or mouse input wakes the displays and ends the session.
 
-</div>
+## Installation
 
-Small Windows utility for turning off the display while requesting that the system stay awake. Useful when a laptop is running desktop applications or acting as a local server.
+1. Download the [source ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) and extract it.
+2. Keep the extracted folder structure intact.
+3. Run `monitor_off.bat`.
 
-## Quick start
+Requirements: Windows 10 or 11, Windows PowerShell 5.1 or PowerShell 7, and permission to change the active power plan.
 
-Download the repository's [source ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip), extract it, and double-click `monitor_off.bat`. Keep the files together. No installation or C compiler is required.
+## Usage
 
-Stop using the keyboard and mouse for about six seconds. The console remains open while the helper runs; new keyboard or mouse input ends the session and releases its keep-awake request. Windows resumes its normal power policy afterward.
+After launching, leave the keyboard and mouse idle for about six seconds while Windows turns off the displays. Keyboard or mouse input wakes them and ends the session.
 
-## How it works
-
-The script temporarily changes the active power plan's display-idle timeout to one second and lets Windows execute its native display-off path. After roughly five seconds it restores the original timeout. It does not send `SC_MONITORPOWER`, broadcast window messages, or change the display topology.
-
-The helper holds a `PowerRequestSystemRequired` request until new keyboard or mouse input, then exits. It saves both AC and battery timeouts together with the power-plan GUID under `%LOCALAPPDATA%\win-monitor-off\display-timeout.json`. Restoration targets that saved plan even if you switch plans. A second launch in the same session is rejected to protect the recovery record.
-
-If interrupted before restoration, the next launch first restores the saved settings. To restore without starting another display-off session:
+To restore saved display timeouts without starting a new session, run:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\monitor_off.ps1 -Restore
+.\monitor_off.bat -Restore
 ```
 
-## Optional EXE launcher
+If the program is interrupted, the next launch restores the saved timeouts before starting a new session.
 
-The optional C launcher can be built with:
+## Limitations
 
-```text
-gcc -std=c11 -Wall -Wextra -Werror monitor_off.c -o monitor_off.exe
-```
-
-Keep `monitor_off.exe` beside `monitor_off.ps1`. Both launchers prefer PowerShell 7 (`pwsh.exe`) and fall back to Windows PowerShell. The EXE delegates to the script; it is not a standalone binary.
-
-## Requirements and limitations
-
-- Windows 10/11 with Windows PowerShell 5.1 or PowerShell 7.
-- The active user session must have permission to change its power plan.
-- Connect AC power for long-running use. On Modern Standby systems running on battery, Windows ends system power requests five minutes after the sleep timeout expires. Closing the lid or explicitly selecting Sleep also overrides the request. See [Microsoft's power request documentation](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-powersetrequest).
-- Applications that request an always-on display, driver behavior, or managed power policies may prevent display-off. The five-second wait does not confirm the physical display state.
-- The script has not been designed as a Windows service. It operates in the interactive user session where the physical display exists.
+- If closing the lid is configured to put Windows to sleep, keep the lid open during the session. Choosing Sleep also ends the keep-running request and may interrupt background work.
+- On a Modern Standby laptop running on battery, Windows may end the keep-running request five minutes after the system sleep timeout.
 
 ## Development
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for checks and manual verification. Generated EXEs and ZIPs are excluded from source control. GitHub Actions checks PowerShell compatibility and builds the C launcher on Windows.
+Run the checks with Windows PowerShell 5.1 and PowerShell 7 as described in the [contribution guide](docs/CONTRIBUTING.md).
+
+To build the optional EXE package, install PowerShell 7 and clang or gcc, then run:
+
+```powershell
+pwsh -NoProfile -File .\scripts\package.ps1
+```
+
+The package is created in `dist/`. Keep its files together when running `monitor_off.exe`.
+
+## Project structure
+
+```text
+win-monitor-off/
+├── .github/workflows/       # CI checks and package build
+├── docs/
+│   ├── CHANGELOG.md         # Project update history
+│   ├── CONTRIBUTING.md      # Contribution guide
+│   └── DEVELOPMENT.md       # Architecture and implementation notes
+├── scripts/
+│   └── package.ps1          # Builds the optional EXE package
+├── src/
+│   ├── MonitorOff.ps1       # Display and power-management behavior
+│   ├── NativeMethods.cs     # Windows API declarations
+│   └── launcher.c           # Optional native launcher
+├── tests/check.ps1          # PowerShell checks
+├── monitor_off.bat          # Windows entry point
+├── monitor_off.ps1          # PowerShell entry point
+├── LICENSE                  # MIT License
+├── README.md                # English overview and usage
+└── README.zh-CN.md          # Simplified Chinese overview and usage
+```
+
+## Documentation
+
+- [Development guide](docs/DEVELOPMENT.md), [contribution guide](docs/CONTRIBUTING.md), and [changelog](docs/CHANGELOG.md).
 
 ## License
 
-[MIT](LICENSE).
+This project is licensed under the [MIT License](LICENSE).

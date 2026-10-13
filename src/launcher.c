@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
+#include <string.h>
 #include <wchar.h>
 
 static void print_last_error(const wchar_t *action)
@@ -8,8 +9,14 @@ static void print_last_error(const wchar_t *action)
     fwprintf(stderr, L"无法%s（错误码 %lu）。\n", action, (unsigned long)error);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    BOOL restore = FALSE;
+    if (argc > 2 || (argc == 2 && _stricmp(argv[1], "-Restore") != 0)) {
+        fwprintf(stderr, L"用法：monitor_off.exe [-Restore]\n");
+        return 2;
+    }
+    restore = argc == 2;
     /*
        保持可执行文件与 monitor_off.ps1 的行为一致。
        旧的原生实现会发送 SC_MONITORPOWER；在仅支持 S0 的笔记本上，
@@ -65,9 +72,10 @@ int main(void)
     int written = swprintf_s(
         command_line,
         ARRAYSIZE(command_line),
-        L"\"%s\" -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"%s\"",
+        L"\"%s\" -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"%s\"%s",
         powershell_path,
-        script_path);
+        script_path,
+        restore ? L" -Restore" : L"");
     if (written < 0) {
         fwprintf(stderr, L"无法生成 PowerShell 启动参数。\n");
         return 1;
@@ -91,9 +99,20 @@ int main(void)
         return 1;
     }
 
-    WaitForSingleObject(process.hProcess, INFINITE);
+    DWORD wait_result = WaitForSingleObject(process.hProcess, INFINITE);
+    if (wait_result != WAIT_OBJECT_0) {
+        print_last_error(L"等待 PowerShell 结束");
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        return 1;
+    }
     DWORD exit_code = 1;
-    GetExitCodeProcess(process.hProcess, &exit_code);
+    if (!GetExitCodeProcess(process.hProcess, &exit_code)) {
+        print_last_error(L"读取 PowerShell 退出码");
+        CloseHandle(process.hThread);
+        CloseHandle(process.hProcess);
+        return 1;
+    }
     CloseHandle(process.hThread);
     CloseHandle(process.hProcess);
     return (int)exit_code;

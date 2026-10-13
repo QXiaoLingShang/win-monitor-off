@@ -2,16 +2,13 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $tokens = $null
 $errors = $null
+$implementation = Join-Path $root 'src/MonitorOff.ps1'
 $ast = [Management.Automation.Language.Parser]::ParseFile(
-    (Join-Path $root 'monitor_off.ps1'), [ref]$tokens, [ref]$errors)
+    $implementation, [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw ($errors -join "`n") }
 
 # Load definitions only: never execute the display-off session in a check.
-$native = $ast.Find({ param($node)
-    $node -is [Management.Automation.Language.AssignmentStatementAst] -and
-    $node.Left.Extent.Text -eq '$nativeType'
-}, $true)
-Invoke-Expression $native.Extent.Text
+$nativeType = Get-Content -Raw -LiteralPath (Join-Path $root 'src/NativeMethods.cs')
 Add-Type -TypeDefinition $nativeType
 $ast.FindAll({ param($node)
     $node -is [Management.Automation.Language.FunctionDefinitionAst]
@@ -81,6 +78,11 @@ try {
     '{"Scheme":"invalid","AC":0,"DC":0}' | Set-Content $stateFile
     Assert-Throws { Restore-DisplayState -StateFile $stateFile } 'Invalid scheme should fail.'
     Assert-True (Test-Path $stateFile) 'Invalid recovery record was discarded.'
+    '{"Scheme":"8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c","AC":1.5,"DC":300}' | Set-Content $stateFile
+    $script:commands.Clear()
+    Assert-Throws { Restore-DisplayState -StateFile $stateFile } 'Fractional timeout should fail.'
+    Assert-True ($script:commands.Count -eq 0) 'Invalid timeout changed the power plan.'
+    Assert-True (Test-Path $stateFile) 'Invalid timeout record was discarded.'
     '{"AC":0}' | Set-Content $stateFile
     Assert-Throws { Restore-DisplayState -StateFile $stateFile -WarningAction SilentlyContinue } 'Missing timeout should fail.'
 }

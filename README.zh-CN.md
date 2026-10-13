@@ -1,57 +1,77 @@
-<div align="center">
+<h1 align="center">win-monitor-off</h1>
 
-# win-monitor-off
+<p align="center">
+  <a href="README.md">English</a> · 简体中文
+</p>
 
-快速关闭显示器，同时保持 Windows 继续运行。
+你是否遇到过这样的情况：笔记本外接显示器运行着耗时任务，你想关掉屏幕避免光线打扰他人，却发现合上笔记本盖可能让电脑进入睡眠，而只关闭外接显示器又会让笔记本内屏继续亮着？
 
-[English](README.md)
+手动关闭显示器、拔掉连接线或反复合盖不仅繁琐，更糟糕的是，屏幕熄灭的同时系统可能直接进入睡眠，导致后台任务中断。`win-monitor-off` 正是为此设计——它会临时将当前电源方案的显示器空闲关闭时间设为一秒，并请求 Windows 在会话期间保持系统运行。约六秒后，显示器熄灭，原来的关闭时间恢复，后台任务继续运行；按键或移动鼠标会重新点亮显示器并结束本次会话。
 
-</div>
+## 安装
 
-一个简单的 Windows 关屏工具，在关闭显示器时请求系统保持运行。适合笔记本运行桌面程序或作为本地服务器的场景。
+1. 下载 [源码 ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) 并解压。
+2. 保持解压后的文件结构完整。
+3. 运行 `monitor_off.bat`。
 
-## 快速开始
+运行要求：Windows 10 或 11、Windows PowerShell 5.1 或 PowerShell 7，以及修改活动电源方案的权限。
 
-下载仓库的[源码 ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip)，解压后双击 `monitor_off.bat`。保持文件在同一目录即可，无需安装或 C 编译器。
+## 使用
 
-启动后约 6 秒内不要操作键盘或鼠标。运行期间命令行窗口保持打开；新的键盘或鼠标输入会结束本次会话，释放保持唤醒的请求，之后 Windows 按原来的电源策略运行。
+启动后约六秒内不要操作键盘或鼠标，等待 Windows 关闭显示器。之后按键或移动鼠标，显示器会重新点亮，本次会话结束。
 
-## 工作方式
-
-脚本先读取当前电源方案的显示器关闭时间，临时改为 1 秒，让 Windows 执行原生的“显示器空闲关闭”路径；约 5 秒后恢复原设置。
-
-程序不会发送 `SC_MONITORPOWER`，不会广播窗口消息，也不会改变显示器拓扑。程序持有 `PowerRequestSystemRequired` 电源请求，直到检测到新的键盘或鼠标输入后退出。
-
-脚本在 `%LOCALAPPDATA%\win-monitor-off\display-timeout.json` 保存电源方案 GUID 及原来的交流、直流显示器关闭时间。即使中途切换电源方案，也只恢复之前记录的方案。同一用户会话中重复启动会被拒绝，以保护恢复记录。
-
-如果进程在恢复设置前被强制终止，下次启动会先恢复原设置。也可以只恢复设置，不启动关屏会话：
+只恢复已保存的显示器关闭时间、不开始新的会话：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\monitor_off.ps1 -Restore
+.\monitor_off.bat -Restore
 ```
 
-## 可选 EXE 启动器
+如果程序意外中断，下次启动时会先恢复保存的关闭时间，再开始新的会话。
 
-如需构建 C 启动器：
+## 局限
 
-```text
-gcc -std=c11 -Wall -Wextra -Werror monitor_off.c -o monitor_off.exe
-```
-
-构建后的 `monitor_off.exe` 必须与 `monitor_off.ps1` 放在同一目录。两个启动器都优先使用 PowerShell 7（`pwsh.exe`），找不到时回退到 Windows PowerShell。EXE 负责调用脚本，不能脱离脚本独立使用。
-
-## 要求与限制
-
-- Windows 10/11，安装 Windows PowerShell 5.1 或 PowerShell 7。
-- 当前用户需要有权限修改当前电源方案。
-- 长时间运行请接入电源。使用电池的 Modern Standby 设备，在系统睡眠超时后 5 分钟会终止保持运行的电源请求；合盖或手动选择睡眠也会覆盖此请求。参见 [Microsoft 电源请求说明](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-powersetrequest)。
-- 其他程序的保持显示请求、驱动行为或受管理的电源策略可能阻止关屏。等待约 5 秒并不代表已经确认物理显示器关闭。
-- 本项目不是 Windows 服务，只在存在物理显示器的交互式用户会话中工作。
+- 如果电源设置会在合盖时让 Windows 进入睡眠，请在会话期间保持笔记本开盖。用户选择“睡眠”也会结束保持系统运行的请求，后台任务可能中断。
+- 使用 Modern Standby 的笔记本在电池供电时，Windows 可能在系统睡眠超时五分钟后结束保持运行的请求。
 
 ## 开发
 
-验证命令和手动测试步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)。生成的 EXE、ZIP 不进入源码版本控制。GitHub Actions 在 Windows 上检查 PowerShell 兼容性并编译 C 启动器。
+开发检查步骤见[参与开发指南（英文）](docs/CONTRIBUTING.md)。请分别使用 Windows PowerShell 5.1 和 PowerShell 7 运行检查。
+
+如需构建可选的 EXE 文件包，请安装 PowerShell 7 和 clang 或 gcc，然后运行：
+
+```powershell
+pwsh -NoProfile -File .\scripts\package.ps1
+```
+
+文件包生成在 `dist/`。运行 `monitor_off.exe` 时，请保持包内文件在一起。
+
+## 项目结构
+
+```text
+win-monitor-off/
+├── .github/workflows/       # CI 检查和文件包构建
+├── docs/
+│   ├── CHANGELOG.md         # 英文项目更新记录
+│   ├── CONTRIBUTING.md      # 英文参与开发指南
+│   └── DEVELOPMENT.md       # 英文开发与实现说明
+├── scripts/
+│   └── package.ps1          # 构建可选的 EXE 文件包
+├── src/
+│   ├── MonitorOff.ps1       # 显示器与电源管理逻辑
+│   ├── NativeMethods.cs     # Windows API 声明
+│   └── launcher.c           # 可选的原生启动器
+├── tests/check.ps1          # PowerShell 检查
+├── monitor_off.bat          # Windows 启动入口
+├── monitor_off.ps1          # PowerShell 启动入口
+├── LICENSE                  # MIT 许可证
+├── README.md                # 英文介绍与使用说明
+└── README.zh-CN.md          # 简体中文介绍与使用说明
+```
+
+## 项目文档
+
+- [开发说明（英文）](docs/DEVELOPMENT.md)、[参与开发指南（英文）](docs/CONTRIBUTING.md) 和 [更新记录（英文）](docs/CHANGELOG.md)。
 
 ## 许可证
 
-[MIT](LICENSE)。
+本项目采用 [MIT 许可证](LICENSE)。
