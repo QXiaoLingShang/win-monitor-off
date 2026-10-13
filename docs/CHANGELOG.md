@@ -10,3 +10,4 @@ This file records notable project updates.
 - Organized both READMEs into matching sections for installation, usage, limitations, development, project structure, documentation, and licensing.
 - Moved development and contribution guides into `docs/` and kept the project's documentation guides in English.
 - Aligned documented behavior, requirements, package instructions, and project layout with the current implementation.
+- Reworked the README guidance around portable use, practical power notes, and contributor instructions.

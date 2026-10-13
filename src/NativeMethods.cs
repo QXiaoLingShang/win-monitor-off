@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
+/// <summary>声明保持系统运行和查询最后输入时间所需的 Windows API 结构与函数。</summary>
 public static class MonitorOffNative
 {
     [StructLayout(LayoutKind.Sequential)]

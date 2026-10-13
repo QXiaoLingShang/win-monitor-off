@@ -1,3 +1,10 @@
+﻿<#
+.SYNOPSIS
+检查脚本解析、恢复逻辑和只读电源方案查询。
+.DESCRIPTION
+通过模拟电源命令验证逻辑，并只读查询本机活动方案；不会启动关屏会话或修改电源设置。
+#>
+
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $tokens = $null
@@ -7,7 +14,7 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
     $implementation, [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw ($errors -join "`n") }
 
-# Load definitions only: never execute the display-off session in a check.
+# HOW：只加载函数定义，不在检查中启动实际关屏会话。
 $nativeType = Get-Content -Raw -LiteralPath (Join-Path $root 'src/NativeMethods.cs')
 Add-Type -TypeDefinition $nativeType
 $ast.FindAll({ param($node)
@@ -83,6 +90,11 @@ try {
     Assert-Throws { Restore-DisplayState -StateFile $stateFile } 'Fractional timeout should fail.'
     Assert-True ($script:commands.Count -eq 0) 'Invalid timeout changed the power plan.'
     Assert-True (Test-Path $stateFile) 'Invalid timeout record was discarded.'
+    '{"Scheme":"8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c","AC":null,"DC":300}' | Set-Content $stateFile
+    $script:commands.Clear()
+    Assert-Throws { Restore-DisplayState -StateFile $stateFile } 'Null timeout should fail.'
+    Assert-True ($script:commands.Count -eq 0) 'Null timeout changed the power plan.'
+    Assert-True (Test-Path $stateFile) 'Null timeout record was discarded.'
     '{"AC":0}' | Set-Content $stateFile
     Assert-Throws { Restore-DisplayState -StateFile $stateFile -WarningAction SilentlyContinue } 'Missing timeout should fail.'
 }
@@ -91,7 +103,7 @@ finally {
     Remove-Item -LiteralPath $tempDirectory
 }
 
-# Read-only integration: compare the parser with this machine's powercfg output.
+# HOW：只读查询本机活动方案，确认解析器能处理实际 powercfg 输出。
 Remove-Item Function:Invoke-PowerCfg
 Invoke-Expression ($ast.Find({ param($node)
     $node -is [Management.Automation.Language.FunctionDefinitionAst] -and

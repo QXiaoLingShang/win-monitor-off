@@ -1,10 +1,19 @@
-﻿[CmdletBinding()]
+﻿<#
+.SYNOPSIS
+通过显示器空闲超时关闭显示器，并保持系统在会话期间运行。
+.DESCRIPTION
+保存并临时缩短活动电源方案的显示器超时，关屏后恢复原值，再等待用户输入。
+.PARAMETER Restore
+仅恢复上次保存的显示器超时，不启动新的关屏会话。
+#>
+
+[CmdletBinding()]
 param([switch]$Restore)
 
 $ErrorActionPreference = 'Stop'
 
-# 强制 Windows 使用原生的显示器空闲关闭路径。
-# 不发送 SC_MONITORPOWER：在 Modern Standby 笔记本上它可能触发 S0 睡眠。
+# WHY：使用 Windows 原生显示器空闲关闭路径；SC_MONITORPOWER 在部分 Modern Standby
+# 笔记本上可能触发 S0 睡眠，导致桌面输入检测无法继续运行。
 if (-not ('MonitorOffNative' -as [type])) {
     Add-Type -Path (Join-Path $PSScriptRoot 'NativeMethods.cs')
 }
@@ -29,9 +38,9 @@ function Get-ActiveScheme {
 function Get-DisplayTimeouts {
     param([Parameter(Mandatory)][guid]$Scheme)
     $text = (Invoke-PowerCfg @('/q', $Scheme, 'SUB_VIDEO', 'VIDEOIDLE')) -join "`n"
-    # The final two hexadecimal values are AC and DC, regardless of UI language.
+    # HOW：从输出中提取十六进制索引，最后两个值依次对应 AC 和 DC，不依赖系统显示语言。
     $values = [regex]::Matches($text, '(?im)0x([0-9a-f]+)\s*$')
-    # Expect minimum, maximum, increment, AC, DC; reject truncated output.
+    # HOW：要求最小值、最大值、步进值、AC 和 DC 五项齐全，拒绝截断或格式异常的输出。
     if ($values.Count -ne 5) {
         throw 'Unable to parse the active display timeout from powercfg output.'
     }
@@ -49,11 +58,10 @@ function Set-DisplayTimeouts {
         [Parameter(Mandatory)][uint32]$AC,
         [Parameter(Mandatory)][uint32]$DC
     )
-    # VIDEOIDLE 的单位是秒。设置为 1 秒即可进入正常的显示器空闲关闭路径，
-    # 不需要发送显示器电源命令。
+    # WHY：VIDEOIDLE 以秒计；设为 1 秒可走系统原生熄屏路径，避免发送可能触发待机的显示器命令。
     Invoke-PowerCfg @('/setacvalueindex', $Scheme, 'SUB_VIDEO', 'VIDEOIDLE', $AC) | Out-Null
     Invoke-PowerCfg @('/setdcvalueindex', $Scheme, 'SUB_VIDEO', 'VIDEOIDLE', $DC) | Out-Null
-    # Do not switch back if the user has selected a different plan.
+    # HOW：只有原方案仍为活动方案时才应用设置，避免切回用户后来选择的方案。
     if ([guid](Get-ActiveScheme) -eq $Scheme) {
         Invoke-PowerCfg @('/setactive', $Scheme) | Out-Null
     }
@@ -61,7 +69,7 @@ function Set-DisplayTimeouts {
 
 function ConvertTo-DisplayTimeout {
     param([Parameter(Mandatory)][object]$Value, [Parameter(Mandatory)][string]$Name)
-    if ($Value -is [string] -or $Value -is [bool] -or
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [bool] -or
         $Value -is [array] -or $Value -is [pscustomobject]) {
         throw "The recovery record contains an invalid $Name timeout."
     }
@@ -89,7 +97,7 @@ function Restore-DisplayState {
     $ac = ConvertTo-DisplayTimeout -Value $acProperty.Value -Name 'AC'
     $dc = ConvertTo-DisplayTimeout -Value $dcProperty.Value -Name 'DC'
 
-    # Older versions did not record a scheme; retain their recovery behavior.
+    # WHY：旧版本的恢复记录没有方案 GUID，沿用旧行为，恢复到当前活动方案。
     if ($null -eq $state.PSObject.Properties['Scheme']) {
         Write-Warning 'Legacy recovery record: restoring the current power scheme.'
         $scheme = [guid](Get-ActiveScheme)
@@ -106,7 +114,7 @@ function Invoke-MonitorOff {
     $stateDirectory = Join-Path $env:LOCALAPPDATA 'win-monitor-off'
     $stateFile = Join-Path $stateDirectory 'display-timeout.json'
 
-    # 如果上一次进程被强制终止，启动时恢复之前保存的显示器关闭时间。
+    # HOW：若上一次进程被强制终止，先恢复记录中的显示器超时，再决定是否启动新会话。
     if (Test-Path -LiteralPath $stateFile) {
         try {
             Restore-DisplayState -StateFile $stateFile
@@ -125,7 +133,7 @@ function Invoke-MonitorOff {
         'Keep the system running while the display is natively idle-off')
     $reason = [MonitorOffNative+REASON_CONTEXT]::new()
     $reason.Version = 0
-    $reason.Flags = 1 # POWER_REQUEST_CONTEXT_SIMPLE_STRING：使用简单文本说明。
+    $reason.Flags = 1 # HOW：使用简单文本作为电源请求的原因说明。
     $reasonUnion = [MonitorOffNative+REASON_UNION]::new()
     $reasonUnion.SimpleReasonString = $reasonText
     $reason.Reason = $reasonUnion
@@ -137,7 +145,7 @@ function Invoke-MonitorOff {
             $powerRequest -eq [IntPtr]::new(-1)) {
             throw 'PowerCreateRequest failed.'
         }
-        # 在本次关屏会话期间，阻止系统稍后因空闲自动进入睡眠。
+        # WHY：关屏后仍需运行输入检测，因此请求系统不要因空闲自动进入睡眠。
         if (-not [MonitorOffNative]::PowerSetRequest($powerRequest, 1)) {
             throw 'PowerSetRequest failed.'
         }
@@ -153,11 +161,10 @@ function Invoke-MonitorOff {
         $stateSaved = $true
 
         Set-DisplayTimeouts -Scheme $savedTimeouts.Scheme -AC 1 -DC 1
-        # 等待 Windows 原生空闲计时器到期。这里使用短暂延时，
-        # 用于替代旧的 SC_MONITORPOWER 调用。
+        # HOW：等待 Windows 原生显示器空闲计时器到期。
         Start-Sleep -Milliseconds 5500
 
-        # 显示器进入空闲关闭状态后，恢复用户原来的关闭时间。
+        # HOW：显示器进入空闲关闭状态后，立即恢复用户原来的超时设置。
         Restore-DisplayState -StateFile $stateFile
         $stateRestored = $true
 
@@ -194,7 +201,7 @@ function Invoke-MonitorOff {
     }
 }
 
-# Serialize recovery and the session so a second launch cannot overwrite state.
+# WHY：恢复和关屏会话必须串行执行，避免第二次启动覆盖尚未恢复的记录。
 $mutex = [Threading.Mutex]::new($false, 'Local\win-monitor-off')
 $ownsMutex = $false
 try {

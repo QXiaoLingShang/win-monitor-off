@@ -1,3 +1,8 @@
+﻿<#
+.SYNOPSIS
+构建包含原生启动器和 PowerShell 实现的可运行文件包。
+#>
+
 [CmdletBinding()]
 param()
 

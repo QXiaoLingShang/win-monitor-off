@@ -8,17 +8,13 @@
 
 手动关闭显示器、拔掉连接线或反复合盖不仅繁琐，更糟糕的是，屏幕熄灭的同时系统可能直接进入睡眠，导致后台任务中断。`win-monitor-off` 正是为此设计——它会临时将当前电源方案的显示器空闲关闭时间设为一秒，并请求 Windows 在会话期间保持系统运行。约六秒后，显示器熄灭，原来的关闭时间恢复，后台任务继续运行；按键或移动鼠标会重新点亮显示器并结束本次会话。
 
-## 安装
-
-1. 下载 [源码 ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) 并解压。
-2. 保持解压后的文件结构完整。
-3. 运行 `monitor_off.bat`。
-
-运行要求：Windows 10 或 11、Windows PowerShell 5.1 或 PowerShell 7，以及修改活动电源方案的权限。
-
 ## 使用
 
-启动后约六秒内不要操作键盘或鼠标，等待 Windows 关闭显示器。之后按键或移动鼠标，显示器会重新点亮，本次会话结束。
+1. 下载 [源码 ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) 并解压，保持解压后的文件结构不变。
+2. 运行 `monitor_off.bat`，然后约六秒内不要操作键盘或鼠标，等待 Windows 关闭显示器。
+3. 按任意键或移动鼠标，重新点亮显示器并结束本次会话。
+
+程序无需安装。运行需要 Windows 10 或 11、Windows PowerShell 5.1 或 PowerShell 7，以及修改活动电源方案的权限。
 
 只恢复已保存的显示器关闭时间、不开始新的会话：
 
@@ -28,16 +24,17 @@
 
 如果程序意外中断，下次启动时会先恢复保存的关闭时间，再开始新的会话。
 
-## 局限
+## 使用限制
 
-- 如果电源设置会在合盖时让 Windows 进入睡眠，请在会话期间保持笔记本开盖。用户选择“睡眠”也会结束保持系统运行的请求，后台任务可能中断。
-- 使用 Modern Standby 的笔记本在电池供电时，Windows 可能在系统睡眠超时五分钟后结束保持运行的请求。
+- 程序会请求 Windows 关闭显示器，但无法保证显示器一定熄灭。如果屏幕仍亮着，可能是其他应用或 Windows 电源设置要求它保持开启。
+- 会话期间不要选择“睡眠”。如果合盖操作设置为让笔记本进入睡眠，请保持笔记本开盖；睡眠会暂停会话，后台任务也可能中断。
+- 使用 Modern Standby 的笔记本在电池供电时，Windows 会在设定的系统睡眠超时之后五分钟结束此保持运行请求。长时间运行任务时，请接通电源。
 
-## 开发
+## 参与开发
 
-开发检查步骤见[参与开发指南（英文）](docs/CONTRIBUTING.md)。请分别使用 Windows PowerShell 5.1 和 PowerShell 7 运行检查。
+如何使用 Windows PowerShell 5.1 和 PowerShell 7 运行检查，请见[参与开发指南（英文）](docs/CONTRIBUTING.md)。
 
-如需构建可选的 EXE 文件包，请安装 PowerShell 7 和 clang 或 gcc，然后运行：
+构建可选的 EXE 文件包需要 PowerShell 7 以及 clang 或 gcc：
 
 ```powershell
 pwsh -NoProfile -File .\scripts\package.ps1

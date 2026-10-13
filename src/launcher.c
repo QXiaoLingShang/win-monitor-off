@@ -1,3 +1,6 @@
+/**
+ * @file 校验启动参数并启动同目录中的 PowerShell 实现。
+ */
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,10 +21,9 @@ int main(int argc, char **argv)
     }
     restore = argc == 2;
     /*
-       保持可执行文件与 monitor_off.ps1 的行为一致。
-       旧的原生实现会发送 SC_MONITORPOWER；在仅支持 S0 的笔记本上，
-       这可能进入 Modern Standby 并暂停注入式桌面 Hook。
-       现在由脚本使用原生的显示器空闲关闭路径。
+       WHY：EXE 必须与 monitor_off.ps1 共用同一实现。旧原生路径发送
+       SC_MONITORPOWER，在仅支持 S0 的笔记本上可能进入 Modern Standby，
+       使桌面输入检测暂停；因此由脚本使用原生显示器空闲关闭路径。
     */
     wchar_t module_path[32768];
     DWORD length = GetModuleFileNameW(NULL, module_path, ARRAYSIZE(module_path));

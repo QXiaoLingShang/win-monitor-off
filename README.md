@@ -8,17 +8,13 @@ Have you ever been running a long task on a laptop connected to an external moni
 
 Manually switching off the monitor, unplugging it, or repeatedly closing the lid gets tedious. Worse, the system may go to sleep as the screens turn off, interrupting background tasks. `win-monitor-off` was built for this: it temporarily sets the active power plan's display idle timeout to one second and asks Windows to keep the system running during the session. About six seconds later, the displays turn off and the original timeout is restored while background tasks continue. Keyboard or mouse input wakes the displays and ends the session.
 
-## Installation
-
-1. Download the [source ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) and extract it.
-2. Keep the extracted folder structure intact.
-3. Run `monitor_off.bat`.
-
-Requirements: Windows 10 or 11, Windows PowerShell 5.1 or PowerShell 7, and permission to change the active power plan.
-
 ## Usage
 
-After launching, leave the keyboard and mouse idle for about six seconds while Windows turns off the displays. Keyboard or mouse input wakes them and ends the session.
+1. Download the [source ZIP](https://github.com/QXiaoLingShang/win-monitor-off/archive/refs/heads/main.zip) and extract it. Keep the extracted folder structure intact.
+2. Run `monitor_off.bat`. Leave the keyboard and mouse idle for about six seconds while Windows turns off the displays.
+3. Press a key or move the mouse to wake the displays and end the session.
+
+No installation is needed. The tool requires Windows 10 or 11, Windows PowerShell 5.1 or PowerShell 7, and permission to change the active power plan.
 
 To restore saved display timeouts without starting a new session, run:
 
@@ -30,14 +26,15 @@ If the program is interrupted, the next launch restores the saved timeouts befor
 
 ## Limitations
 
-- If closing the lid is configured to put Windows to sleep, keep the lid open during the session. Choosing Sleep also ends the keep-running request and may interrupt background work.
-- On a Modern Standby laptop running on battery, Windows may end the keep-running request five minutes after the system sleep timeout.
+- The tool asks Windows to turn off the displays, but cannot guarantee that they do. If a display stays on, another app or a Windows power setting may be keeping it awake.
+- Do not choose Sleep during a session. If closing the lid is configured to put the laptop to sleep, keep the lid open; sleep suspends the session and may pause background work.
+- On a Modern Standby laptop running on battery, Windows ends this keep-awake request five minutes after the configured sleep timeout. Connect the laptop to AC power for longer tasks.
 
-## Development
+## For contributors
 
-Run the checks with Windows PowerShell 5.1 and PowerShell 7 as described in the [contribution guide](docs/CONTRIBUTING.md).
+The [contribution guide](docs/CONTRIBUTING.md) explains how to run the checks with Windows PowerShell 5.1 and PowerShell 7.
 
-To build the optional EXE package, install PowerShell 7 and clang or gcc, then run:
+To build the optional EXE package, use PowerShell 7 with clang or gcc installed:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\package.ps1
